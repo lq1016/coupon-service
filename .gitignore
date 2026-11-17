@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+*.tsbuildinfo
+vitest.config.ts.timestamp-*
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+!data/.gitkeep
