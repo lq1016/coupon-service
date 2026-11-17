@@ -1,0 +1,279 @@
+openapi: 3.0.3
+info:
+  title: 优惠券发放与核销服务 API
+  version: 1.0.0
+  description: 防超发、幂等、防刷、四态状态机、退券回补；所有业务接口需 Bearer JWT。
+servers:
+  - url: http://localhost:3000
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        ok: { type: boolean }
+        data: { type: object }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+    CouponInstance:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string, example: ABCD-EFGH-JKLM }
+        template_id: { type: string }
+        activity_id: { type: string }
+        user_id: { type: string, nullable: true }
+        status: { type: string, enum: [unused, used, expired, refunded] }
+        claimed_at: { type: integer, nullable: true }
+        used_at: { type: integer, nullable: true }
+        refunded_at: { type: integer, nullable: true }
+    ClaimResult:
+      type: object
+      properties:
+        instanceId: { type: string }
+        code: { type: string }
+        templateId: { type: string }
+        activityId: { type: string }
+        status: { type: string }
+        claimedAt: { type: integer }
+        replay: { type: boolean, description: true 表示为幂等重放 }
+security:
+  - bearerAuth: []
+paths:
+  /api/health:
+    get:
+      tags: [系统]
+      summary: 健康检查（无需鉴权）
+      security: []
+      responses:
+        '200': { description: ok }
+  /api/auth/login:
+    post:
+      tags: [鉴权]
+      summary: 登录获取 JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: user1 }
+                password: { type: string, example: Test@123456 }
+      responses:
+        '200': { description: token }
+        '401': { description: 账号或密码错误 }
+  /api/auth/me:
+    get:
+      tags: [鉴权]
+      summary: 当前登录用户
+      responses:
+        '200': { description: 用户信息 }
+  /api/templates:
+    post:
+      tags: [券模板]
+      summary: 接口1 创建券模板（管理员）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, activityId, total, discount, startAt, endAt]
+              properties:
+                name: { type: string }
+                activityId: { type: string }
+                total: { type: integer }
+                discount: { type: integer, description: 优惠金额分 }
+                perUser: { type: integer, default: 1 }
+                startAt: { type: integer, description: 毫秒时间戳 }
+                endAt: { type: integer }
+      responses:
+        '201': { description: 模板 }
+        '400': { description: TOTAL_INVALID / INVALID_DATE_RANGE }
+  /api/templates/{id}:
+    get:
+      tags: [券模板]
+      summary: 接口- 模板详情
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 模板 }
+        '404': { description: TEMPLATE_NOT_FOUND }
+  /api/templates/{id}/inventory:
+    get:
+      tags: [库存]
+      summary: 接口7 库存查询
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 库存
+          content:
+            application/json:
+              example: { ok: true, data: { total: 10000, claimed: 3000, remaining: 7000 } }
+  /api/templates/{id}/anti-abuse:
+    put:
+      tags: [防刷]
+      summary: 配置防刷规则（管理员）
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                perUser: { type: integer }
+                perDevice: { type: integer }
+                perIp: { type: integer }
+                enabled: { type: boolean }
+      responses:
+        '200': { description: 规则 }
+  /api/claims:
+    post:
+      tags: [领券]
+      summary: 接口3 领券（含防超发/幂等/防刷）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, idempotencyKey]
+              properties:
+                templateId: { type: string }
+                idempotencyKey: { type: string, description: 客户端生成，全局唯一 }
+                deviceId: { type: string }
+                ip: { type: string }
+      responses:
+        '200':
+          description: 领取结果（幂等重放也返回 200 且 replay=true）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClaimResult' }
+        '409': { description: INSUFFICIENT_STOCK / CLAIM_LIMIT_* / CLAIM_PER_USER_EXCEEDED }
+        '429': { description: 限流 }
+  /api/claims/batch:
+    post:
+      tags: [领券]
+      summary: 接口8 批量发放（管理员）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, items]
+              properties:
+                templateId: { type: string }
+                items:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    type: object
+                    required: [userId, idempotencyKey]
+                    properties:
+                      userId: { type: string }
+                      idempotencyKey: { type: string }
+                      deviceId: { type: string }
+                      ip: { type: string }
+      responses:
+        '200': { description: 批量结果汇总 }
+        '400': { description: BATCH_TOO_LARGE }
+  /api/redemptions:
+    post:
+      tags: [核销]
+      summary: 接口4 核销
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, orderNo]
+              properties:
+                code: { type: string }
+                orderNo: { type: string }
+      responses:
+        '200': { description: 核销后的券（status=used） }
+        '409': { description: COUPON_ALREADY_USED / ORDER_ALREADY_USED / COUPON_EXPIRED }
+  /api/refunds:
+    post:
+      tags: [退券]
+      summary: 接口5 退券（管理员，回补库存）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+                reason: { type: string }
+      responses:
+        '200': { description: 退券后的券（status=refunded） }
+        '409': { description: REFUND_NOT_ALLOWED / REFUND_WINDOW_CLOSED }
+  /api/coupons:
+    get:
+      tags: [查询]
+      summary: 接口6 券查询（按券码/用户/活动/状态）
+      parameters:
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: userId, schema: { type: string } }
+        - { in: query, name: activityId, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [unused, used, expired, refunded] } }
+        - { in: query, name: limit, schema: { type: integer } }
+      responses:
+        '200':
+          description: 券列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CouponInstance' }
+  /api/coupons/by-code/{code}:
+    get:
+      tags: [查询]
+      summary: 按券码查询
+      parameters:
+        - { in: path, name: code, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 券 }
+        '404': { description: COUPON_NOT_FOUND }
+  /api/logs:
+    get:
+      tags: [日志]
+      summary: 日志检索（按券码/用户/活动）
+      parameters:
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: userId, schema: { type: string } }
+        - { in: query, name: activityId, schema: { type: string } }
+      responses:
+        '200': { description: 日志列表 }
+  /api/jobs/expire-scan:
+    post:
+      tags: [定时任务]
+      summary: 手动触发过期扫描（管理员）
+      responses:
+        '200':
+          description: 扫描结果
+          content:
+            application/json:
+              example: { ok: true, data: { scanned: 5, expired: 5, templateIds: [] } }
+  /api/error-codes:
+    get:
+      tags: [系统]
+      summary: 错误码表
+      responses:
+        '200': { description: 错误码定义 }
