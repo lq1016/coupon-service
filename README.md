@@ -16,7 +16,7 @@
 | 8. 源码 | 完整可编译 TypeScript，git 提交历史，无硬编码密钥，附建表脚本与依赖清单 |
 | 9. 可运行 | 干净机器按 README 步骤即可启动 |
 | 10. 可体验 | 测试环境 + 2 个测试账号 + 120 条演示数据 |
-| 11. 体验路径 | 5 步清单 + 录屏脚本见 [`docs/DEMO.md`](docs/DEMO.md) |
+| 11. 体验路径 | 5 步清单 + **交互式 Demo 页** `http://localhost:3000/demo` + 3 分钟录屏 [`docs/demo.mp4`](docs/demo.mp4) + 录屏脚本见 [`docs/DEMO.md`](docs/DEMO.md) |
 | 12. 修改与缺陷修复 | 含 2 轮修改提交，验收后 7 天内修复缺陷（见 [`CHANGELOG.md`](CHANGELOG.md)） |
 
 ## 快速开始（干净机器）
@@ -50,6 +50,25 @@ npm start
 | admin | Admin@123456 | admin |
 
 演示活动 `activityId = demo-activity`，含 120 张 unused 券。
+
+## 交互式 Demo 页与录屏
+
+启动服务后打开 `http://localhost:3000/demo`，这是一个零依赖的静态交互页（`public/demo.html` + `public/demo.js`），按 6 张卡片依次点击即可完整跑通全链路，每一步都会显示真实 HTTP 状态码与响应 JSON：
+
+| 卡片 | 演示内容 | 关键响应 |
+| --- | --- | --- |
+| 1 登录鉴权 | user1 / admin 登录 | `200` + JWT + 用户信息 |
+| 2 领券成功 + 幂等重放 | 领券、同幂等键再领一次 | `200` 券码 `unused` / 重放 `replay:true` 同一券码 |
+| 3 超领拦截 + 防超发 | 管理员改限领规则 → 同用户换设备 / 换账号同设备 → 1 张库存连抢 2 次 | `429 CLAIM_LIMIT_USER` / `429 CLAIM_LIMIT_DEVICE` / `409 INSUFFICIENT_STOCK`（恰好售出 1/1） |
+| 4 核销 | 核销 → 同订单号换新券再核销 | `200` 状态 `used` / `409 ORDER_ALREADY_USED` |
+| 5 退券回补 | 退券前后库存 + 差异对比 | `200` 状态 `refunded`，claimed −1 / redeemed −1 / refunded +1 |
+| 6 审计日志 | 按活动检索全链路日志 | `200` CLAIM → REDEEM → REFUND 三条 |
+
+页面右上角有「步骤 N/5」标注条、点击目标高亮圈和底部字幕，便于录屏讲解；标注逻辑全部在 `public/demo.js` 的 `window.anno` 中实现，不依赖任何前端框架。
+
+**录屏**：[`docs/demo.mp4`](docs/demo.mp4)（1920×1080，3 分 00 秒），完整覆盖上表 6 张卡片。复现步骤见 [`docs/DEMO.md`](docs/DEMO.md)。
+
+> Demo 页脚本以独立文件 `public/demo.js` 提供，是因为服务端启用了 helmet 的严格 CSP（`script-src 'self'`），内联脚本与内联事件属性都会被浏览器拦截。
 
 ## 核心设计
 
@@ -102,9 +121,10 @@ src/
   middleware/         鉴权与管理员权限
   services/           模板/领券/核销退券/批量 业务逻辑
   jobs/               过期扫描
-  routes/             接口定义
+  routes/             接口定义 + demo 静态页路由
+public/                Demo 页（demo.html + demo.js，零依赖）
 tests/                单元测试 + 接口测试
-docs/                 OpenAPI / 架构 / 错误码 / 性能 / 体验路径 / 报告
+docs/                 OpenAPI / 架构 / 错误码 / 性能 / 体验路径 / 录屏 / 报告
 scripts/              seed / bench 压测 / smoke
 ```
 

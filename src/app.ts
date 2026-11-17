@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import { migrate } from './db/migrate.js';
 import { authRouter } from './routes/auth.js';
 import { couponRouter } from './routes/coupons.js';
+import { demoRouter } from './routes/demo.js';
 import { HttpError } from './utils/index.js';
 
 export function createApp(): express.Express {
@@ -29,6 +30,12 @@ export function createApp(): express.Express {
     next();
   });
   app.use('/api', couponRouter);
+
+  // 单页 UI demo（浏览器访问 /demo）
+  app.use('/demo', demoRouter);
+
+  // 根路径重定向到 demo
+  app.get('/', (_req, res) => res.redirect('/demo'));
 
   app.use((_req, res) => {
     res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: '资源不存在' } });

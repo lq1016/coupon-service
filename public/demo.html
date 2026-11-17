@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>优惠券发放与核销服务 · 交互演示</title>
+<style>
+  :root { color-scheme: light; --bg:#f5f7fa; --card:#fff; --line:#e3e8ef; --text:#1f2937; --sub:#6b7280; --brand:#7c3aed; --brand-d:#5b21b6; --ok:#059669; --err:#dc2626; --warn:#d97706; --mono:#0b1021; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  header { background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; padding:22px 32px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+  header h1 { margin:0; font-size:22px; }
+  header p { margin:6px 0 0; opacity:.9; font-size:13px; }
+  .wrap { max-width:1400px; margin:0 auto; padding:24px; }
+  .status-bar { display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:20px; }
+  .badge { display:inline-flex; align-items:center; gap:6px; font-size:14px; padding:5px 12px; border-radius:20px; background:#eef2f7; color:var(--sub); }
+  .badge.on { background:#e7f7ef; color:var(--ok); }
+  .badge.off { background:#fdecec; color:var(--err); }
+  .dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+  .grid { display:grid; grid-template-columns:1fr; gap:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .card h2 { margin:0; font-size:19px; padding:16px 22px; background:#fafbfc; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; }
+  .card h2 .num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; background:var(--brand); color:#fff; font-size:14px; }
+  .card h2 .step { margin-left:auto; font-size:13px; font-weight:400; color:var(--sub); }
+  .body { padding:18px 22px; }
+  label { display:block; font-size:13px; color:var(--sub); margin:10px 0 5px; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:7px; font-size:15px; font-family:inherit; background:#fff; color:var(--text);
+  }
+  input:focus, select:focus, textarea:focus { outline:2px solid rgba(124,58,237,.25); border-color:var(--brand); }
+  .row { display:flex; gap:12px; align-items:flex-end; }
+  .row > * { flex:1; min-width:0; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:0; border-radius:7px; padding:11px 20px; font-size:15px; font-weight:600; cursor:pointer; background:var(--brand); color:#fff; transition:.15s; white-space:nowrap; }
+  .btn:hover { background:var(--brand-d); }
+  .btn:disabled { background:#c3cbd5; cursor:not-allowed; }
+  .btn.ghost { background:#eef2f7; color:var(--text); }
+  .btn.ghost:hover { background:#e2e8f0; }
+  .btn.sm { padding:9px 16px; font-size:14px; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .hint { font-size:14px; color:var(--sub); margin:12px 0 0; }
+  .resp { margin-top:14px; background:var(--mono); color:#c8e1ff; border-radius:8px; padding:14px 18px; font-family:"SF Mono",Consolas,Monaco,monospace; font-size:15px; line-height:1.62; max-height:700px; overflow:auto; white-space:pre-wrap; word-break:break-all; min-height:44px; }
+  .resp .ok { color:#6ee7a8; }
+  .resp .err { color:#ff8a8a; }
+  .resp .key { color:#8ab4f8; }
+  .kv { display:flex; justify-content:space-between; font-size:14px; padding:7px 0; border-bottom:1px dashed var(--line); }
+  .kv:last-child { border:0; }
+  .kv b { font-weight:600; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:12px; font-size:13px; font-weight:600; }
+  .pill.g { background:#e7f7ef; color:var(--ok); }
+  .pill.r { background:#fdecec; color:var(--err); }
+  .pill.y { background:#fef3e0; color:var(--warn); }
+  .pill.p { background:#ede9fe; color:var(--brand); }
+  .deny-banner { background:#fdecec; color:var(--err); padding:13px 18px; border-radius:8px; font-size:16px; font-weight:600; display:none; margin-top:12px; }
+  .ok-banner { background:#e7f7ef; color:var(--ok); padding:13px 18px; border-radius:8px; font-size:16px; font-weight:600; display:none; margin-top:12px; }
+  footer { text-align:center; color:var(--sub); font-size:13px; padding:26px; }
+  .toc { display:flex; gap:9px; flex-wrap:wrap; margin-bottom:18px; }
+  .toc a { font-size:13px; color:var(--brand); text-decoration:none; background:var(--card); border:1px solid var(--line); padding:7px 14px; border-radius:16px; }
+  .toc a:hover { background:var(--brand); color:#fff; }
+  .tiny { font-size:11px; color:var(--sub); }
+  .state-flow { display:flex; gap:8px; margin:14px 0; flex-wrap:wrap; align-items:center; }
+  .st { padding:6px 14px; border-radius:8px; font-size:14px; font-weight:600; background:#e5e9ef; color:var(--sub); }
+  .st.unused { background:#dbeafe; color:#1d4ed8; }
+  .st.used { background:#e7f7ef; color:var(--ok); }
+  .st.refunded { background:#fef3e0; color:var(--warn); }
+  .st.expired { background:#fee2e2; color:#b91c1c; }
+  .arrow { color:var(--sub); font-size:14px; }
+
+  /* ---------- 操作步骤标注：每张卡片列出本步骤调用的接口 ---------- */
+  .api-list { background:#f7f9fc; border-bottom:1px solid var(--line); padding:10px 22px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+  .api-tag { font-size:12px; font-weight:700; letter-spacing:.4px; padding:2px 8px; border-radius:5px; color:#fff; flex:none; }
+  .api-tag.get { background:#0b7f4f; } .api-tag.post { background:#0c79d8; }
+  .api-tag.put { background:#b45309; } .api-tag.del { background:#dc2626; }
+  .api-list code { font-family:"SF Mono",Consolas,Monaco,monospace; font-size:13px; color:#334155; background:#fff; border:1px solid var(--line); border-radius:5px; padding:2px 8px; }
+  .api-note { font-size:12px; color:var(--sub); }
+
+  /* ---------- 录制标注层（录屏时叠加，不影响手动使用） ---------- */
+  #annoLayer { position:fixed; inset:0; pointer-events:none; z-index:9000; display:none; }
+  #annoLayer.on { display:block; }
+  .anno-step { position:absolute; left:50%; top:16px; transform:translateX(-50%); background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border-radius:12px; padding:11px 24px; box-shadow:0 8px 28px rgba(124,58,237,.4); display:flex; align-items:center; gap:14px; white-space:nowrap; z-index:6; }
+  .anno-n { background:rgba(255,255,255,.22); border-radius:8px; padding:4px 12px; font-size:14px; font-weight:700; }
+  .anno-t { font-size:22px; font-weight:700; letter-spacing:.5px; }
+  .anno-api { background:rgba(0,0,0,.24); border-radius:8px; padding:5px 12px; font-family:"SF Mono",Consolas,Monaco,monospace; font-size:14px; }
+  .anno-cap { position:absolute; left:50%; bottom:24px; transform:translateX(-50%); background:rgba(11,16,33,.93); color:#e6edf7; border-radius:10px; padding:12px 26px; font-size:18px; line-height:1.5; max-width:1300px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); z-index:6; }
+  .anno-cap b { color:#c4b5fd; }
+  .anno-ring { position:absolute; border:3px solid #7c3aed; border-radius:10px; box-shadow:0 0 0 9999px rgba(15,23,42,.22); z-index:2; }
+  .anno-ring.hit { border-color:#059669; box-shadow:0 0 0 9999px rgba(15,23,42,.14); }
+  .anno-tip { position:absolute; background:#dc2626; color:#fff; font-size:14px; font-weight:700; padding:5px 13px; border-radius:999px; white-space:nowrap; box-shadow:0 4px 14px rgba(220,38,38,.45); z-index:4; }
+  .anno-tip::before { content:''; position:absolute; right:-7px; top:50%; transform:translateY(-50%); border:7px solid transparent; border-right:0; border-left-color:#dc2626; }
+  .anno-label { position:absolute; background:#0f172a; color:#fff; font-size:15px; font-weight:600; padding:6px 14px; border-radius:8px; transform:translateX(-50%); white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,.4); z-index:4; }
+  .anno-label::after { content:''; position:absolute; left:50%; top:-7px; transform:translateX(-50%); border:7px solid transparent; border-bottom-color:#0f172a; border-top:0; }
+</style>
+</head>
+<body>
+<div id="annoLayer"></div>
+<header>
+  <h1>🎟️ 优惠券发放与核销服务 · 交互演示</h1>
+  <p>覆盖：领券成功 · 幂等重放 · 超领与防刷拦截 · 防超发 · 核销 · 退券回补 · 审计日志</p>
+</header>
+<div class="wrap">
+  <div class="status-bar">
+    <span class="badge" id="svcBadge"><span class="dot"></span>服务状态：检测中…</span>
+    <span class="badge" id="userBadge"><span class="dot"></span>用户未登录</span>
+    <span class="badge" id="adminBadge"><span class="dot"></span>管理员未登录</span>
+    <span style="flex:1"></span>
+    <span class="tiny">打开 <b>/api/health</b> 可看原始健康响应</span>
+  </div>
+
+  <div class="toc">
+    <a href="#s1">1 登录</a><a href="#s2">2 领券+幂等</a><a href="#s3">3 超领拦截</a>
+    <a href="#s4">4 核销</a><a href="#s5">5 退券回补</a><a href="#s6">6 日志</a>
+  </div>
+
+  <div class="grid">
+    <!-- 1 登录 -->
+    <div class="card" id="s1">
+      <h2><span class="num">1</span> 登录鉴权 <span class="step">需 user1 与 admin 两个身份</span></h2>
+      <div class="api-list"><span class="api-tag post">POST</span><code>/api/auth/login</code><span class="api-note">→ 换取 JWT，后续请求带 <code>Authorization: Bearer &lt;token&gt;</code>；管理员接口需 admin 角色</span></div>
+      <div class="body">
+        <div class="row">
+          <div><label>账号</label><input type="text" id="loginUser" value="user1" /></div>
+          <div><label>密码</label><input type="password" id="loginPass" value="Test@123456" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnLogin">以 user1 登录</button>
+          <button class="btn ghost" id="btnAdmin">以 admin 登录</button>
+        </div>
+        <div class="resp" id="respLogin">点「以 user1 登录」开始…</div>
+      </div>
+    </div>
+
+    <!-- 2 领券 + 幂等 -->
+    <div class="card" id="s2">
+      <h2><span class="num">2</span> 领券成功 + 幂等重放 <span class="step">同一幂等键重复领取只成功一次</span></h2>
+      <div class="api-list"><span class="api-tag post">POST</span><code>/api/claims</code><span class="api-tag get">GET</span><code>/api/templates/:id</code><span class="api-note">→ 领券返回券码与状态；重复同 key 返回 <code>replay:true</code> 与同一券码</span></div>
+      <div class="body">
+        <div class="row">
+          <div><label>券模板 ID（登录后自动解析 demo-activity）</label><input type="text" id="tplId" placeholder="tpl_xxx" /></div>
+          <div><label>设备 ID</label><input type="text" id="deviceId" value="dev-1" /></div>
+          <div><label>幂等键</label><input type="text" id="idemKey" value="demo-key-1" /></div>
+        </div>
+        <div class="state-flow">
+          <span class="st unused">unused 未使用</span><span class="arrow">→ 领券 →</span>
+          <span class="st used">used 已核销</span><span class="arrow">→ 退券 →</span>
+          <span class="st refunded">refunded 已退</span><span class="arrow">·</span>
+          <span class="st expired">expired 已过期</span>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnClaim">① 领券</button>
+          <button class="btn ghost" id="btnReplay">② 同一幂等键再领一次</button>
+          <button class="btn ghost" id="btnTpl">查看模板详情</button>
+        </div>
+        <div class="resp" id="respClaim">登录后点「领券」开始…</div>
+        <div id="claimStats" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- 3 超领拦截 -->
+    <div class="card" id="s3">
+      <h2><span class="num">3</span> 超领拦截 <span class="step">限领规则可配置 + 防超发</span></h2>
+      <div class="api-list"><span class="api-tag put">PUT</span><code>/api/templates/:id/anti-abuse</code><span class="api-tag post">POST</span><code>/api/claims</code><span class="api-tag post">POST</span><code>/api/templates</code><span class="api-note">→ 超限返回 <code>429 CLAIM_LIMIT_*</code>；库存耗尽返回 <code>409 INSUFFICIENT_STOCK</code></span></div>
+      <div class="body">
+        <p class="hint">把限领规则改成「同用户 1 张 / 同设备 1 张」，再分别用「同一用户换设备」与「换账号同设备」领取，验证两条拦截路径；最后建一个只有 1 张库存的模板连抢 2 次，验证防超发。</p>
+        <div class="actions">
+          <button class="btn" id="btnRule">① 配置限领规则（管理员）</button>
+          <button class="btn ghost" id="btnLimitUser">② 同用户换设备再领</button>
+          <button class="btn ghost" id="btnLimitDevice">③ 换账号同设备再领</button>
+          <button class="btn ghost" id="btnOversell">④ 防超发：1 张库存连抢 2 次</button>
+        </div>
+        <div class="deny-banner" id="denyBanner">🚫 已被限领规则拦截</div>
+        <div class="resp" id="respLimit">点「① 配置限领规则」开始…</div>
+        <div id="limitStats" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- 4 核销 -->
+    <div class="card" id="s4">
+      <h2><span class="num">4</span> 核销 <span class="step">unused → used，同订单不可重复核销</span></h2>
+      <div class="api-list"><span class="api-tag post">POST</span><code>/api/redemptions</code><span class="api-tag get">GET</span><code>/api/coupons/by-code/:code</code><span class="api-note">→ 核销成功后券状态变 used；同订单号重复核销返回 <code>409 ORDER_ALREADY_USED</code></span></div>
+      <div class="body">
+        <div class="row">
+          <div><label>券码（步骤2自动填入）</label><input type="text" id="couponCode" placeholder="XXXX-XXXX-XXXX" /></div>
+          <div><label>订单号</label><input type="text" id="orderNo" value="ORDER-DEMO-001" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRedeem">① 核销</button>
+          <button class="btn ghost" id="btnRedeemAgain">② 同一订单重复核销</button>
+          <button class="btn ghost" id="btnCode">③ 查券状态</button>
+        </div>
+        <div class="resp" id="respRedeem">先在步骤2领一张券…</div>
+      </div>
+    </div>
+
+    <!-- 5 退券回补 -->
+    <div class="card" id="s5">
+      <h2><span class="num">5</span> 退券回补 <span class="step">库存 claimed-1 / refunded+1 / redeemed-1</span></h2>
+      <div class="api-list"><span class="api-tag get">GET</span><code>/api/templates/:id/inventory</code><span class="api-tag post">POST</span><code>/api/refunds</code><span class="api-note">→ 退券后券状态变 refunded，库存按规则回补</span></div>
+      <div class="body">
+        <div class="actions" style="margin-top:0">
+          <button class="btn" id="btnInvBefore">① 退券前库存</button>
+          <button class="btn ghost" id="btnRefund">② 管理员退券</button>
+          <button class="btn ghost" id="btnInvAfter">③ 退券后库存</button>
+        </div>
+        <div class="resp" id="respRefund">先在步骤4核销，再演示退券回补…</div>
+        <div id="invDiff" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- 6 日志 -->
+    <div class="card" id="s6">
+      <h2><span class="num">6</span> 审计日志 <span class="step">可按券码 / 用户 / 活动检索</span></h2>
+      <div class="api-list"><span class="api-tag get">GET</span><code>/api/logs?activityId=demo-activity</code><span class="api-tag get">GET</span><code>/api/coupons?code=</code><span class="api-note">→ 全链路 CLAIM / REDEEM / REFUND 记录</span></div>
+      <div class="body">
+        <div class="actions" style="margin-top:0">
+          <button class="btn ghost" id="btnLogs">刷新日志</button>
+          <button class="btn ghost" id="btnCouponList">按券码查券</button>
+        </div>
+        <div class="resp" id="respLogs">点「刷新日志」查看…</div>
+      </div>
+    </div>
+  </div>
+  <footer>优惠券发放与核销服务 · 单页交互演示 · 测试账号密码仅本地演示用</footer>
+</div>
+
+<script src="/demo/demo.js"></script>
+</body>
+</html>
