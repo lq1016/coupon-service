@@ -4,7 +4,7 @@
 
 ## 测试环境
 
-Node.js v22.23.4 / SQLite（better-sqlite3 11.8.1）/ local。复现：`npm run build && npm run bench`（bench 自建独立模板，不影响演示数据）。
+Node.js v26.13.1 / SQLite（better-sqlite3 12.11.1）/ local。复现：`npm run build && npm run bench`（bench 自建独立模板，不影响演示数据）。
 
 ## 防超发压测（验收标准 #3）
 
@@ -16,7 +16,7 @@ Node.js v22.23.4 / SQLite（better-sqlite3 11.8.1）/ local。复现：`npm run 
 其他错误        : 0
 唯一券码数      : 10000
 库存 claimed    : 10000 / 10000
-耗时            : 12316 ms  (2436 req/s)
+耗时            : 5264 ms  (5699 req/s)
 结论            : ✅ 通过：成功数恰好 1 万，无超发
 ```
 

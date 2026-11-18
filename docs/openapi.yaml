@@ -81,7 +81,7 @@ paths:
   /api/templates:
     post:
       tags: [券模板]
-      summary: 接口1 创建券模板（管理员）
+      summary: 接口2 创建券模板（管理员）
       requestBody:
         required: true
         content:
@@ -103,7 +103,7 @@ paths:
   /api/templates/{id}:
     get:
       tags: [券模板]
-      summary: 接口- 模板详情
+      summary: 接口3 模板详情
       parameters:
         - { in: path, name: id, required: true, schema: { type: string } }
       responses:
@@ -112,7 +112,7 @@ paths:
   /api/templates/{id}/inventory:
     get:
       tags: [库存]
-      summary: 接口7 库存查询
+      summary: 接口4 库存查询
       parameters:
         - { in: path, name: id, required: true, schema: { type: string } }
       responses:
@@ -124,7 +124,7 @@ paths:
   /api/templates/{id}/anti-abuse:
     put:
       tags: [防刷]
-      summary: 配置防刷规则（管理员）
+      summary: 接口14 配置防刷规则（管理员）
       parameters:
         - { in: path, name: id, required: true, schema: { type: string } }
       requestBody:
@@ -142,7 +142,7 @@ paths:
   /api/claims:
     post:
       tags: [领券]
-      summary: 接口3 领券（含防超发/幂等/防刷）
+      summary: 接口5 领券（含防超发/幂等/防刷）
       requestBody:
         required: true
         content:
@@ -166,7 +166,7 @@ paths:
   /api/claims/batch:
     post:
       tags: [领券]
-      summary: 接口8 批量发放（管理员）
+      summary: 接口6 批量发放（管理员）
       requestBody:
         required: true
         content:
@@ -193,7 +193,7 @@ paths:
   /api/redemptions:
     post:
       tags: [核销]
-      summary: 接口4 核销
+      summary: 接口7 核销
       requestBody:
         required: true
         content:
@@ -210,7 +210,7 @@ paths:
   /api/refunds:
     post:
       tags: [退券]
-      summary: 接口5 退券（管理员，回补库存）
+      summary: 接口8 退券（管理员，回补库存）
       requestBody:
         required: true
         content:
@@ -227,7 +227,7 @@ paths:
   /api/coupons:
     get:
       tags: [查询]
-      summary: 接口6 券查询（按券码/用户/活动/状态）
+      summary: 接口9 券查询（按券码/用户/活动/状态）
       parameters:
         - { in: query, name: code, schema: { type: string } }
         - { in: query, name: userId, schema: { type: string } }
@@ -245,7 +245,7 @@ paths:
   /api/coupons/by-code/{code}:
     get:
       tags: [查询]
-      summary: 按券码查询
+      summary: 接口10 按券码查询
       parameters:
         - { in: path, name: code, required: true, schema: { type: string } }
       responses:
@@ -254,7 +254,7 @@ paths:
   /api/logs:
     get:
       tags: [日志]
-      summary: 日志检索（按券码/用户/活动）
+      summary: 接口11 日志检索（按券码/用户/活动）
       parameters:
         - { in: query, name: code, schema: { type: string } }
         - { in: query, name: userId, schema: { type: string } }
@@ -264,7 +264,7 @@ paths:
   /api/jobs/expire-scan:
     post:
       tags: [定时任务]
-      summary: 手动触发过期扫描（管理员）
+      summary: 接口12 手动触发过期扫描（管理员）
       responses:
         '200':
           description: 扫描结果
@@ -274,6 +274,6 @@ paths:
   /api/error-codes:
     get:
       tags: [系统]
-      summary: 错误码表
+      summary: 接口13 错误码表
       responses:
         '200': { description: 错误码定义 }

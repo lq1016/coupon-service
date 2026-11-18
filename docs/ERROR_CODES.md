@@ -1,8 +1,10 @@
-# 错误码表（30+）
+# 错误码表（36 个）
 
 所有错误响应统一格式：`{ "ok": false, "error": { "code": "XXX", "message": "中文说明" } }`。
 
 规则：`code` 为稳定机器码，前端按 code 分支；`message` 为人类可读提示。接口也可通过 `GET /api/error-codes` 获取结构化错误码表。
+
+> 代码中的 `ERROR_CODES` 表共 36 项（`src/security/errors.ts`）；登录限流另返回 `TOO_MANY_ATTEMPTS`（429），由 `express-rate-limit` 直接下发，不在注册表内。
 
 ## 通用 / 鉴权（4xxx）
 
@@ -72,4 +74,4 @@
 | BATCH_PARTIAL_FAILURE | 207 | 批量部分失败（逐条结果见响应） |
 | INVALID_DATE_RANGE | 400 | 时间范围不合法 |
 
-合计 30+ 个错误码，覆盖鉴权、库存、幂等、防刷、状态机、批量全链路。
+合计 36 个错误码，覆盖鉴权、库存、幂等、防刷、状态机、批量全链路。

@@ -1,31 +1,31 @@
 # 优惠券发放与核销服务
 
-大促场景的优惠券服务：发券、领券、核销、退券全链路，重点解决**超发、脚本刷券、幂等、四态状态机与退券回补**。基于 Node.js 22 + TypeScript + Express + SQLite（better-sqlite3），单进程即可正确防超发，无需 Redis/分布式锁。
+大促场景的优惠券服务：发券、领券、核销、退券全链路，重点解决**超发、脚本刷券、幂等、四态状态机与退券回补**。基于 TypeScript + Express + SQLite（better-sqlite3 12），单进程即可正确防超发，无需 Redis/分布式锁。
 
 ## 功能与验收对照
 
 | 验收项 | 实现情况 |
 | --- | --- |
-| 1. 接口 ≥8 个 + OpenAPI | 13 个接口（模板创建/详情、库存、防刷配置、领券、批量发放、核销、退券、券查询、券码查询、日志、过期扫描、错误码），见 [`docs/openapi.yaml`](docs/openapi.yaml) |
+| 1. 接口 ≥8 个 + OpenAPI | 16 个接口（模板创建/详情、库存、防刷配置、领券、批量发放、核销、退券、券查询、券码查询、日志、过期扫描、错误码、登录、当前用户、健康检查），见 [`docs/openapi.yaml`](docs/openapi.yaml) |
 | 2. 数据库 ≥6 张表 | 10 张表：users、coupon_templates、inventory、coupon_instances、claim_records、redemption_records、refund_records、idempotency_records、anti_abuse_rules、operation_logs；脚本 `src/db/schema.ts`（等价 SQL `src/db/schema.sql`） |
 | 3. 防超发 | 条件原子更新 `UPDATE inventory SET claimed=claimed+1 WHERE claimed<total` + 事务；3 万并发压测成功恰好 1 万，见 [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | 4. 幂等 | 幂等键查结果缓存 + claim_records 唯一键双保险；同键重复 3 次只成功 1 次、返回同一券码 |
 | 5. 防刷 | 每模板可配 per_user/per_device/per_ip 限额（管理员接口动态配置），超限返回 CLAIM_LIMIT_* 明确错误码 |
 | 6. 状态机 | unused/used/expired/refunded 四态完整；退券回补规则见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)；过期定时扫描 + 手动触发入口 |
-| 7. 错误码 ≥20 + 日志检索 + 覆盖率 ≥80% | 30+ 错误码见 [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md)；日志按券码/用户/活动检索；覆盖率见 [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) |
+| 7. 错误码 ≥20 + 日志检索 + 覆盖率 ≥80% | 36 个错误码见 [`docs/ERROR_CODES.md`](docs/ERROR_CODES.md)；日志按券码/用户/活动检索；覆盖率见 [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) |
 | 8. 源码 | 完整可编译 TypeScript，git 提交历史，无硬编码密钥，附建表脚本与依赖清单 |
 | 9. 可运行 | 干净机器按 README 步骤即可启动 |
 | 10. 可体验 | 测试环境 + 2 个测试账号 + 120 条演示数据 |
 | 11. 体验路径 | 5 步清单 + **交互式 Demo 页** `http://localhost:3000/demo` + 3 分钟录屏 [`docs/demo.mp4`](docs/demo.mp4) + 录屏脚本见 [`docs/DEMO.md`](docs/DEMO.md) |
-| 12. 修改与缺陷修复 | 含 2 轮修改提交，验收后 7 天内修复缺陷（见 [`CHANGELOG.md`](CHANGELOG.md)） |
+| 12. 修改与缺陷修复 | 含 3 轮修改提交，验收后 7 天内修复缺陷（见 [`CHANGELOG.md`](CHANGELOG.md)） |
 
 ## 快速开始（干净机器）
 
-环境要求：Node.js ≥ 20（推荐 22），npm ≥ 9。SQLite 嵌入式，无需单独安装。
+环境要求：Node.js ≥ 20（推荐 22；CI 同时验证 20 与 22），npm ≥ 9。SQLite 嵌入式，无需单独安装。
 
 ```bash
 # 1. 安装依赖
-npm install
+npm ci
 
 # 2. 配置（可选，默认 SQLite + 本地文件）
 cp .env.example .env
@@ -94,8 +94,14 @@ npm start
 | 6 | GET | `/api/templates/:id/inventory` | 库存查询 |
 | 7 | GET | `/api/logs` | 日志检索 |
 | 8 | POST | `/api/claims/batch` | 批量发放（管理员） |
-| — | POST | `/api/jobs/expire-scan` | 过期扫描手动触发（管理员） |
-| — | PUT | `/api/templates/:id/anti-abuse` | 配置防刷规则（管理员） |
+| 9 | POST | `/api/jobs/expire-scan` | 过期扫描手动触发（管理员） |
+| 10 | PUT | `/api/templates/:id/anti-abuse` | 配置防刷规则（管理员） |
+| 11 | GET | `/api/templates/:id` | 模板详情 |
+| 12 | GET | `/api/coupons/by-code/:code` | 按券码查券 |
+| 13 | GET | `/api/error-codes` | 结构化错误码表 |
+| 14 | POST | `/api/auth/login` | 登录取 JWT（限流 10 次/分钟） |
+| 15 | GET | `/api/auth/me` | 当前用户 |
+| 16 | GET | `/api/health` | 健康检查（免鉴权） |
 
 完整请求/响应/错误码见 OpenAPI 文档。
 
@@ -108,6 +114,11 @@ npm run bench     # 防超发压测：1万券/3万请求
 ```
 
 覆盖率结果见 [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md)，压测结果见 [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)。
+
+## 开源与 CI
+
+- 许可证：[MIT](LICENSE)
+- CI：[`.github/workflows/ci.yml`](.github/workflows/ci.yml) 在 Node 20 / 22 上执行安装、类型检查、覆盖率测试与防超发压测；压测作为回归闸门，防止防超发逻辑被改坏。
 
 ## 目录结构
 

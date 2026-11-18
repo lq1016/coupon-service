@@ -24,6 +24,13 @@
 - 录制 3 分钟验收演示视频 `docs/demo.mp4`（1920×1080 / 30fps / 180.13 秒），完整覆盖领券成功、幂等重放、超领拦截、防超发、核销、同订单重复核销、退券回补、审计日志。
 - README 与 `docs/DEMO.md` 补充 Demo 页说明、录屏时间轴与逐条响应证据表。
 
+## 第四轮修改（开源发布与依赖兼容）
+
+- 新增 MIT `LICENSE` 与 GitHub Actions CI（Node 20 / 22：安装、类型检查、覆盖率测试、防超发压测回归闸门）。
+- `better-sqlite3` 从 `^11.8.1` 升级到 `^12.11.1`：v11 使用的 V8 API（`v8::Object::GetPrototype`、`v8::Context::GetIsolate`、`v8::PropertyCallbackInfo::This`）在 Node 24/26 已被移除，导致新环境 `npm ci` 在 node-gyp 阶段编译失败。v12.11.1 官方支持 Node 20–26。
+- 文档事实校准：接口数 13 → 16、错误码 30+ → 36、覆盖率 93.34% → 91.60%、压测环境更新为 Node v26.13.1 / better-sqlite3 12.11.1（实际重跑结果 5699 req/s）；OpenAPI 各接口编号重新对齐。
+- README 补充 MIT 许可证与 CI 章节；快速开始改为 `npm ci`（与 CI 一致）。
+
 ## 验收通过后缺陷修复承诺
 
 验收通过后 7 天内，对发布者反馈的缺陷免费修复并重新提交。
